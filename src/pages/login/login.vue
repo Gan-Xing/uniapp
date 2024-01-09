@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { postLoginAPI, postLoginWxMinAPI, postLoginWxMinSimpleAPI } from '@/services/login'
+import {
+  postLoginAPI,
+  postLoginMiniAPI,
+  postLoginWxMinAPI,
+  postLoginWxMinSimpleAPI,
+} from '@/services/login'
 import { useMemberStore } from '@/stores'
 import type { LoginResult } from '@/types/member'
+import { setToken } from '@/utils'
 import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
@@ -9,16 +15,24 @@ import { ref } from 'vue'
 // 获取 code 登录凭证
 let code = ''
 onLoad(async () => {
-  const res = await wx.login()
-  code = res.code
+  try {
+    const res = await wx.login()
+    code = res.code
+    const response = await postLoginMiniAPI(code)
+    setToken(response.data)
+    console.log('登录成功:', response.data)
+  } catch {
+    console.error('登录失败')
+  }
 })
 
 // 获取用户手机号码
 const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
   await checkedAgreePrivacy()
   const { encryptedData, iv } = ev.detail
-  const res = await postLoginWxMinAPI({ code, encryptedData, iv })
-  loginSuccess(res.result)
+  console.log(ev)
+  // const res = await postLoginWxMinAPI({ code, encryptedData, iv })
+  // loginSuccess(res.result)
 }
 // #endif
 
@@ -26,7 +40,7 @@ const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
 const onGetphonenumberSimple = async () => {
   await checkedAgreePrivacy()
   const res = await postLoginWxMinSimpleAPI('13123456789')
-  loginSuccess(res.result)
+  // loginSuccess(res.result)
 }
 
 const loginSuccess = (profile: LoginResult) => {
@@ -53,7 +67,7 @@ const form = ref({
 const onSubmit = async () => {
   await checkedAgreePrivacy()
   const res = await postLoginAPI(form.value)
-  loginSuccess(res.result)
+  // loginSuccess(res.result)
 }
 // #endif
 
@@ -115,17 +129,6 @@ const onOpenPrivacyContract = () => {
         </button>
       </view>
       <!-- #endif -->
-      <view class="extra">
-        <view class="caption">
-          <text>其他登录方式</text>
-        </view>
-        <view class="options">
-          <!-- 通用模拟登录 -->
-          <button @tap="onGetphonenumberSimple">
-            <text class="icon icon-phone">模拟快捷登录</text>
-          </button>
-        </view>
-      </view>
       <view class="tips" :class="{ animate__shakeY: isAgreePrivacyShakeY }">
         <label class="label" @tap="isAgreePrivacy = !isAgreePrivacy">
           <radio class="radio" color="#28bb9c" :checked="isAgreePrivacy" />

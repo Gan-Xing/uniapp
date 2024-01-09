@@ -19,6 +19,30 @@ export const postLoginWxMinAPI = (data: LoginWxMinParams) => {
 }
 
 /**
+ * 小程序登录
+ * @param code 请求参数
+ */
+export const postLoginMiniAPI = (code: string) => {
+  return http<Auth.Token>({
+    method: 'POST',
+    url: '/api/auth/miniprogram-login',
+    data: { code }, // 将 code 作为对象传递
+  })
+}
+
+/**
+ * 刷新令牌
+ * @param refreshToken 请求参数
+ */
+export const postRefreshTokenAPI = (refreshToken: string) => {
+  return http<Auth.Token>({
+    method: 'POST',
+    url: '/api/auth/refresh', // 替换为实际的刷新令牌 API 路径
+    data: { refreshToken }, // 将 refreshToken 作为对象的属性传递
+  })
+}
+
+/**
  * 小程序登录_内测版
  * @param phoneNumber 模拟手机号码
  */
