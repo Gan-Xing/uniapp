@@ -4,6 +4,7 @@ import {
   postLoginMiniAPI,
   postLoginWxMinAPI,
   postLoginWxMinSimpleAPI,
+  updateUserPhoneAPI,
 } from '@/services/login'
 import { useMemberStore } from '@/stores'
 import type { LoginResult } from '@/types/member'
@@ -14,26 +15,76 @@ import { ref } from 'vue'
 // #ifdef MP-WEIXIN
 // 获取 code 登录凭证
 let code = ''
+
+// 页面加载时检查会话
 onLoad(async () => {
-  try {
-    const res = await wx.login()
-    code = res.code
-    const response = await postLoginMiniAPI(code)
-    setToken(response.data)
-    console.log('登录成功:', response.data)
-  } catch {
-    console.error('登录失败')
-  }
+  await loginAndSetCode()
 })
+
+// 检查会话并根据需要刷新 code
+const checkSessionAndRefreshCode = async () => {
+  let isSessionValid = false
+
+  await new Promise((resolve) => {
+    wx.checkSession({
+      success: () => {
+        isSessionValid = true
+        resolve(true)
+      },
+      fail: () => {
+        isSessionValid = false
+        resolve(false)
+      },
+    })
+  })
+
+  if (!isSessionValid) {
+    await loginAndSetCode()
+  }
+
+  return isSessionValid
+}
+
+// 登录并设置 code
+const loginAndSetCode = async () => {
+  try {
+    // 调用微信的 wx.login 方法获取 code
+    const res = await wx.login()
+    if (res.code) {
+      code = res.code
+      // 使用获取到的 code 调用后端 API 进行登录
+      const response = await postLoginMiniAPI(res.code)
+      // 设置 token，这里假设 token 是响应数据中的一个字段
+      setToken(response.data)
+      console.log('登录成功:', response.data)
+      return true // 登录成功，返回 true
+    } else {
+      console.error('无法获取登录凭证（code）')
+      return false // 登录失败，返回 false
+    }
+  } catch (error) {
+    console.error('登录过程中发生错误:', error)
+    return false // 登录失败，返回 false
+  }
+}
 
 // 获取用户手机号码
 const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
   await checkedAgreePrivacy()
   const { encryptedData, iv } = ev.detail
-  console.log(ev)
-  // const res = await postLoginWxMinAPI({ code, encryptedData, iv })
-  // loginSuccess(res.result)
+
+  try {
+    const isSessionValid = await checkSessionAndRefreshCode()
+    if (isSessionValid && encryptedData && iv) {
+      const res = await updateUserPhoneAPI(code, encryptedData, iv)
+      // loginSuccess('登录成功')
+      // uni.switchTab({ url: '/pages/index/index' })
+    }
+  } catch (error) {
+    console.error('Error updating phone number:', error)
+  }
 }
+
 // #endif
 
 // 模拟手机号码快捷登录（开发练习）

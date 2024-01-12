@@ -71,3 +71,19 @@ export const postLoginAPI = (data: LoginParams) => {
     data,
   })
 }
+
+/**
+ * 更新用户电话号码
+ * @param code
+ * @param encryptedData
+ * @param iv
+ * @returns
+ */
+export const updateUserPhoneAPI = async (code: string, encryptedData: string, iv: string) => {
+  const response = await http({
+    method: 'POST',
+    url: '/api/users/update-phone',
+    data: { code, encryptedData, iv },
+  })
+  return response.data
+}
