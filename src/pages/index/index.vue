@@ -35,9 +35,9 @@ const isLoading = ref(false)
 
 // 页面加载
 onLoad(async () => {
-  isLoading.value = true
-  await Promise.all([getHomeBannerData(), getHomeCategoryData(), getHomeHotData()])
-  isLoading.value = false
+  // isLoading.value = true
+  // await Promise.all([getHomeBannerData(), getHomeCategoryData(), getHomeHotData()])
+  // isLoading.value = false
 })
 
 // 猜你喜欢组合式函数调用

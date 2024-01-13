@@ -77,8 +77,10 @@ const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
     const isSessionValid = await checkSessionAndRefreshCode()
     if (isSessionValid && encryptedData && iv) {
       const res = await updateUserPhoneAPI(code, encryptedData, iv)
+      uni.navigateTo({ url: '/pages/login/success' })
+      // const res2 = await postLoginWxMinAPI({ code, encryptedData, iv })
+      // loginSuccess(res2.result)
       // loginSuccess('登录成功')
-      // uni.switchTab({ url: '/pages/index/index' })
     }
   } catch (error) {
     console.error('Error updating phone number:', error)

@@ -54,6 +54,12 @@
       }
     },
     {
+      "path": "pages/login/success",
+      "style": {
+        "navigationBarTitleText": "登录成功"
+      }
+    },
+    {
       "path": "pages/login/protocal",
       "style": {
         "navigationBarTitleText": "用户服务协议"
@@ -69,6 +75,12 @@
       "path": "pages/goods/goods",
       "style": {
         "navigationBarTitleText": "商品详情"
+      }
+    },
+    {
+      "path": "pages/webview/webview",
+      "style": {
+        "navigationBarTitleText": "外部链接"
       }
     }
   ],
@@ -181,9 +193,7 @@
   "preloadRule": {
     "pages/my/my": {
       "network": "all",
-      "packages": [
-        "pagesMember"
-      ]
+      "packages": ["pagesMember"]
     }
   }
 }
