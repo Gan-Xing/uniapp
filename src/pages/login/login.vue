@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  getUserInfoAPI,
   postLoginAPI,
   postLoginMiniAPI,
   postLoginWxMinAPI,
@@ -8,17 +9,35 @@ import {
 } from '@/services/login'
 import { useMemberStore } from '@/stores'
 import type { LoginResult } from '@/types/member'
-import { setToken } from '@/utils'
+import { getAccessToken, setToken } from '@/utils'
 import { onLoad } from '@dcloudio/uni-app'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 
 // #ifdef MP-WEIXIN
 // 获取 code 登录凭证
 let code = ''
+const userInfo = reactive({
+  avatarUrl: '',
+  nickName: '',
+})
 
 // 页面加载时检查会话
 onLoad(async () => {
-  await loginAndSetCode()
+  try {
+    const res = await loginAndSetCode()
+    if (!res) {
+      return uni.showToast({ icon: 'error', title: '微信登录失败' })
+    }
+    const userInfo = await getUserInfoAPI()
+    const { phoneNumber, avatar, username } = userInfo
+    // if (phoneNumber) {
+    //   uni.switchTab({ url: '/pages/my/my' })
+    // }
+  } catch {
+    return uni.showToast({ icon: 'error', title: '微信登录失败' })
+  }
+
+  // uni.switchTab({ url: '/pages/index/index' })
 })
 
 // 检查会话并根据需要刷新 code
@@ -48,20 +67,20 @@ const checkSessionAndRefreshCode = async () => {
 // 登录并设置 code
 const loginAndSetCode = async () => {
   try {
-    // 调用微信的 wx.login 方法获取 code
     const res = await wx.login()
-    if (res.code) {
-      code = res.code
-      // 使用获取到的 code 调用后端 API 进行登录
-      const response = await postLoginMiniAPI(res.code)
-      // 设置 token，这里假设 token 是响应数据中的一个字段
-      setToken(response.data)
-      console.log('登录成功:', response.data)
-      return true // 登录成功，返回 true
-    } else {
+    console.log('===================', res)
+    if (!res.code) {
       console.error('无法获取登录凭证（code）')
       return false // 登录失败，返回 false
     }
+    code = res.code
+    const response = await postLoginMiniAPI(res.code)
+    if (!response.success) {
+      console.error('后端登录失败')
+      return false // 登录失败，返回 false
+    }
+    setToken(response.data.token)
+    return true // 登录成功，返回 true
   } catch (error) {
     console.error('登录过程中发生错误:', error)
     return false // 登录失败，返回 false
@@ -76,11 +95,17 @@ const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
   try {
     const isSessionValid = await checkSessionAndRefreshCode()
     if (isSessionValid && encryptedData && iv) {
-      const res = await updateUserPhoneAPI(code, encryptedData, iv)
-      uni.navigateTo({ url: '/pages/login/success' })
-      // const res2 = await postLoginWxMinAPI({ code, encryptedData, iv })
-      // loginSuccess(res2.result)
-      // loginSuccess('登录成功')
+      const res = await updateUserPhoneAPI(encryptedData, iv)
+      const accessToken = getAccessToken()
+      const result: LoginResult = {
+        id: res.id, // 确保类型是 number
+        avatar: res.avatar, // 确保类型是 string
+        account: '', // 根据实际情况替换 'your_account'，确保类型是 string
+        nickname: res.username, // 如果是可选的，则可以不提供
+        mobile: res.phoneNumber, // 确保类型是 string
+        token: accessToken, // 础保类型是 string
+      }
+      loginSuccess(result)
     }
   } catch (error) {
     console.error('Error updating phone number:', error)
@@ -96,6 +121,20 @@ const onGetphonenumberSimple = async () => {
   // loginSuccess(res.result)
 }
 
+// 新增：选择头像的处理函数
+function onChooseAvatar(e) {
+  userInfo.avatarUrl = e.detail.avatarUrl
+  // 你可能需要调用 API 更新用户信息
+  // updateUserProfileAPI({ avatarUrl: userInfo.avatarUrl });
+}
+
+// 新增：昵称输入处理函数
+function onInputChange(e) {
+  userInfo.nickName = e.detail.value
+  // 你可能需要调用 API 更新用户信息
+  // updateUserProfileAPI({ nickName: userInfo.nickName });
+}
+
 const loginSuccess = (profile: LoginResult) => {
   // 保存会员信息
   const memberStore = useMemberStore()
@@ -105,7 +144,8 @@ const loginSuccess = (profile: LoginResult) => {
   setTimeout(() => {
     // 页面跳转
     // uni.switchTab({ url: '/pages/my/my' })
-    uni.navigateBack()
+    uni.switchTab({ url: '/pages/index/index' })
+    // uni.navigateBack()
   }, 500)
 }
 
@@ -142,6 +182,20 @@ const checkedAgreePrivacy = async () => {
     return Promise.reject(new Error('请先阅读并勾选协议'))
   }
 }
+const getUserProfile = async () => {
+  try {
+    const res = await uni.getUserProfile({
+      desc: '展示用户信息', // The purpose of requesting user info
+    })
+    console.log('===============res.userInfo', res.userInfo)
+    // userInfo.value.avatar = res.userInfo.avatarUrl
+    // userInfo.value.nickName = res.userInfo.nickName
+    // Additional logic if needed after obtaining user info
+  } catch (error) {
+    console.error('Failed to get user profile:', error)
+    // Handle error
+  }
+}
 
 const onOpenPrivacyContract = () => {
   // #ifdef MP-WEIXIN
@@ -168,6 +222,20 @@ const onOpenPrivacyContract = () => {
 
       <!-- 小程序端授权登录 -->
       <!-- #ifdef MP-WEIXIN -->
+      <view class="userinfo">
+        <button open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          <image class="avatar" :src="userInfo.avatarUrl"></image>
+        </button>
+        <view class="nickname-wrapper">
+          <text class="nickname-label">昵称</text>
+          <input
+            type="nickname"
+            class="nickname-input"
+            placeholder="请输入昵称"
+            @change="onInputChange"
+          />
+        </view>
+      </view>
       <view class="button-privacy-wrap">
         <button
           :hidden="isAgreePrivacy"
@@ -359,6 +427,70 @@ page {
   .link {
     display: inline;
     color: #28bb9c;
+  }
+}
+
+.userinfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #aaa;
+  width: 80%;
+}
+
+.userinfo-avatar {
+  overflow: hidden;
+  width: 128rpx;
+  height: 128rpx;
+  margin: 20rpx;
+  border-radius: 50%;
+}
+
+.usermotto {
+  margin-top: 200px;
+}
+.avatar-wrapper {
+  padding: 0;
+  width: 56px !important;
+  border-radius: 8px;
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+
+.avatar {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.nickname-wrapper {
+  display: flex;
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  color: black;
+}
+
+.nickname-label {
+  width: 105px;
+}
+
+.nickname-input {
+  flex: 1;
+}
+
+.phone-verification {
+  margin: 20px;
+  display: flex;
+  justify-content: center;
+
+  button {
+    padding: 10px 20px;
+    background-color: #f8f8f8;
+    border-radius: 5px;
+    border: 1px solid #ddd;
   }
 }
 </style>

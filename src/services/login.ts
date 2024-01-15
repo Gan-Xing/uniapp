@@ -1,8 +1,7 @@
-import type { LoginResult } from '@/types/member'
+import type { LoginResult, LoginResults } from '@/types/member'
 import { http } from '@/utils/http'
 
 type LoginWxMinParams = {
-  code: string
   encryptedData?: string
   iv?: string
 }
@@ -23,7 +22,7 @@ export const postLoginWxMinAPI = (data: LoginWxMinParams) => {
  * @param code 请求参数
  */
 export const postLoginMiniAPI = (code: string) => {
-  return http<Auth.Token>({
+  return http<LoginResults>({
     method: 'POST',
     url: '/api/auth/miniprogram-login',
     data: { code }, // 将 code 作为对象传递
@@ -73,17 +72,27 @@ export const postLoginAPI = (data: LoginParams) => {
 }
 
 /**
+ * 获取用户信息与权限
+ */
+export const getUserInfoAPI = async () => {
+  const response = await http<any>({
+    method: 'GET',
+    url: '/api/users/current',
+  })
+  return response.data
+}
+
+/**
  * 更新用户电话号码
- * @param code
  * @param encryptedData
  * @param iv
  * @returns
  */
-export const updateUserPhoneAPI = async (code: string, encryptedData: string, iv: string) => {
+export const updateUserPhoneAPI = async (encryptedData: string, iv: string): Promise<any> => {
   const response = await http({
     method: 'POST',
     url: '/api/users/update-phone',
-    data: { code, encryptedData, iv },
+    data: { encryptedData, iv },
   })
   return response.data
 }

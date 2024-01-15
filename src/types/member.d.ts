@@ -18,6 +18,13 @@ export type LoginResult = BaseProfile & {
   token: string
 }
 
+export type LoginResults = BaseProfile & {
+  /** 手机号 */
+  mobile: string
+  /** 登录凭证 */
+  token: Token
+}
+
 /** 个人信息 用户详情信息 */
 export type ProfileDetail = BaseProfile & {
   /** 性别 */
@@ -29,6 +36,14 @@ export type ProfileDetail = BaseProfile & {
   /** 职业 */
   profession?: string
 }
+
+export class Token {
+  accessToken: string
+  refreshToken: string
+  accessExpiresIn: number
+  refreshExpiresIn: number
+}
+
 /** 性别 */
 export type Gender = '女' | '男'
 
